@@ -7,6 +7,7 @@ import type { RouterOutputs } from "~/utils/api";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import Image from "next/image";
+import { LoadingPage, LoadingSpinner } from "~/components/Loading";
 
 dayjs.extend(relativeTime);
 
@@ -62,12 +63,30 @@ const PostView = (props: PostWithUser) => {
   );
 };
 
-const Home: NextPage = () => {
-  const { isSignedIn } = useUser();
-  const { data: posts } = api.posts.getAll.useQuery();
+const Feed = () => {
+  const { data: posts, isFetched: postsLoaded } = api.posts.getAll.useQuery();
 
-  if (!posts) {
-    return <div>Loading...</div>;
+  if (!postsLoaded) {
+    return <LoadingPage />;
+  }
+
+  return (
+    <div className="flex flex-col">
+      {posts?.map((postWithUser) => (
+        <PostView {...postWithUser} key={postWithUser.post.id} />
+      ))}
+    </div>
+  );
+};
+
+const Home: NextPage = () => {
+  const { isSignedIn, isLoaded: userLoaded } = useUser();
+  // Start fetching asap
+  const { isFetched: postsLoaded } = api.posts.getAll.useQuery();
+
+  // Return empty div if both user and posts are not loaded since user tends to load faster
+  if (!userLoaded && !postsLoaded) {
+    return <div />;
   }
 
   return (
@@ -88,11 +107,7 @@ const Home: NextPage = () => {
               </div>
             )}
           </div>
-          <div className="flex flex-col">
-            {posts?.map((postWithUser) => (
-              <PostView {...postWithUser} key={postWithUser.post.id} />
-            ))}
-          </div>
+          <Feed />
         </div>
       </main>
     </>
